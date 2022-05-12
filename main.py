@@ -1,7 +1,4 @@
 from collections import defaultdict
-
-
-from nltk import ngrams
 import numpy as np
 import plotly.figure_factory as ff
 import dash
@@ -10,7 +7,6 @@ import pandas as pd
 from dash import Input, Output, dcc, html, dash_table, State
 import dash_auth
 import plotly.express as px
-import matplotlib.pyplot as plt
 from nltk import word_tokenize
 from wordcloud import WordCloud
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
@@ -78,11 +74,11 @@ sidebar = html.Div(
         dbc.Nav(
             [
                 dbc.NavLink("Home", href="/", active="exact"),
-                dbc.NavLink("Load Data", href="/page-1", active="exact"),
-                dbc.NavLink("Preprocess", href="/page-2", active="exact"),
-                dbc.NavLink("Visualize", href="/page-3", active="exact"),
-                dbc.NavLink("Feature extraction", href="/page-4", active="exact"),
-                dbc.NavLink("Feature selection", href="/page-5", active="exact")
+                dbc.NavLink("Load Data", href="/load-data", active="exact"),
+                dbc.NavLink("Preprocess", href="/preprocess", active="exact"),
+                dbc.NavLink("Visualize", href="/visualize", active="exact"),
+                dbc.NavLink("Feature extraction", href="/feature-extraction", active="exact"),
+                dbc.NavLink("Feature selection", href="/feature-selection", active="exact")
 
             ],
             vertical=True,
@@ -101,7 +97,7 @@ app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
 def render_page_content(pathname):
     if pathname == "/":
         return html.P("home page!")
-    elif pathname == "/page-1":
+    elif pathname == "/load-data":
         return html.Div(
             [
                 html.H1('Data Load'),
@@ -179,7 +175,7 @@ def render_page_content(pathname):
                 ),
                 html.Div(id='output-data-upload'),
             ], className="d-grid gap-2")
-    elif pathname == "/page-2":
+    elif pathname == "/preprocess":
         return html.Div([html.H1('Processing'), html.P('Preprocessing is usually the first step in the pipeline of a '
                                                        'Natural Language Processing (NLP) system. In particular it '
                                                        'assumes usage of following techniques: tokenizing, '
@@ -248,7 +244,7 @@ def render_page_content(pathname):
                          ])
 
     # If the user tries to reach a different page, return a 404 message
-    elif pathname == "/page-3":
+    elif pathname == "/visualize":
         return html.Div([
             html.H2('Visualization'),
             dcc.Tabs(id="tabs-graph", value='tab-1-graph', children=[
@@ -261,7 +257,7 @@ def render_page_content(pathname):
             dcc.Graph(id='tabs-content-graph'),
             html.Div(id='wordcloud')
         ])
-    elif pathname == "/page-4":
+    elif pathname == "/feature-extraction":
         return html.Div([html.H2('Feature extraction'),
                          html.P('The main problem in working with language processing is that machine learning '
                                 'algorithms cannot work on the raw text directly. So, we need some feature extraction '
@@ -338,7 +334,7 @@ def render_page_content(pathname):
                              is_open=False,
                          )
                          ])
-    elif pathname == "/page-5":
+    elif pathname == "/feature-selection":
         return html.Div([html.H1("Feature Selection"),
                          html.P(f"Congratulations! Your vectorized dataframe has {df_vect.shape[1]} columns!"
                                 f" That's a lot! However, A large number of irrelevant features increases the training time exponentially and increase the risk of overfitting."),
