@@ -34,11 +34,10 @@ def page_content():
               Input('tabs-graph', 'value'))
 def render_content(tab):
     if tab == 'tab-1-graph':
-        categories = app.df_full.groupby('category', as_index=False).count().rename(columns={'clean_text': 'Total_Numbers'})
+        categories = app.df_preprocessed.groupby('category', as_index=False).count().rename(columns={'clean_text': 'Total_Numbers'})
         return None, px.pie(categories, values='Total_Numbers', names='category'), None
-
     if tab == 'tab-2-graph':
-        freq_df = draw_frequebcy_bars(app.df_full[app.df_full['category'] == 1]['clean_text'])
+        freq_df = draw_frequebcy_bars(app.df_preprocessed[app.df_preprocessed['category'] == 1]['clean_text'])
         # return px.bar(freq_df, x='word', y='count'
         #               )
         return dbc.DropdownMenu(label="Choose sentiment to display...", children=[
@@ -50,8 +49,8 @@ def render_content(tab):
                    y='count'), None
     if tab == 'tab-3-graph':
         tweets_stats = pd.DataFrame()
-        tweets_stats["clean_text"] = app.df_full["clean_text"].astype(str)
-        tweets_stats["category"] = app.df_full["category"]
+        tweets_stats["clean_text"] = app.df_preprocessed["clean_text"].astype(str)
+        tweets_stats["category"] = app.df_preprocessed["category"]
         tweets_stats['length'] = tweets_stats["clean_text"].apply(len)
         hist_data = [tweets_stats[tweets_stats['category'] == -1]['length'],
                      tweets_stats[tweets_stats['category'] == 0]['length'],
@@ -79,7 +78,7 @@ def render_content(tab):
 
 def plot_wordcloud():
     wc = WordCloud(collocations=False, background_color="white", width=500, height=400,
-                   max_words=100).generate(' '.join(app.df_full[app.df_full['category'] == 1]['clean_text']))
+                   max_words=100).generate(' '.join(app.df_preprocessed[app.df_preprocessed['category'] == 1]['clean_text']))
     return wc.to_image()
 
 

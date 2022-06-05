@@ -108,14 +108,14 @@ def toggle_modal(n1, n2, n3, is_open):
     if ctx.triggered[0]['value'] > 0:
         if ctx.triggered[0]['prop_id']:
             if button_id == 'apple btn':
-                app.df_full = app.df_full.append(app.df3)
-                return not is_open, True, "Added", False, None, False, None
+                app.df_full = pd.concat([app.df_full, app.df3], ignore_index=True)
+                return not is_open, True, "Added", False, "Add", False, "Add"
             if button_id == 'reddit btn':
-                app.df_full = app.df_full.append(app.df2)
-                return not is_open, False, None, True, "Added", False, None
+                app.df_full = pd.concat([app.df_full, app.df2], ignore_index=True)
+                return not is_open, False, "Add", True, "Added", False, "Add"
             if button_id == 'airline btn':
-                app.df_full = app.df_full.append(app.df1)
-                return not is_open, False, None, False, None, True, "Added"
+                app.df_full = pd.concat([app.df_full, app.df1], ignore_index=True)
+                return not is_open, False, "Add", False, "Add", True, "Added"
     app.df_full.dropna(axis=0, inplace=True)
     app.df_full.sample(frac=1).reset_index(drop=True, inplace=True)
     return is_open, False, None, None, None, None, None

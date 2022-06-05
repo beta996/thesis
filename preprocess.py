@@ -85,35 +85,35 @@ def submit_preprocessing(n_clicks, chck_values):
 
 
 def preprocess(chck_values: []):
-    df = app.df_full
+    app.df_preprocessed = app.df_full.copy()
 
     special_chars = ['~', ':', "'", '+', '[', '\\', '@', '^', '{', '%', '(', '-', '"', '*', '|', ',', '&', '<', '`',
                      '}', '.', '_', '=', ']', '!', '>', ';', '?', '#', '$', ')', '/', '"']
 
     if 'Lowercasing' in chck_values:
-        df['clean_text'] = df['clean_text'].str.lower()  # convert to lowercase
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.lower()  # convert to lowercase
     if 'hyperlinks removal' in chck_values:
-        df['clean_text'] = df['clean_text'].str.replace('http?:\/\/[^\s]+|www\.[^\s]', '',
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('http?:\/\/[^\s]+|www\.[^\s]', '',
                                                         regex=True)  # remove hyperlinks
     if 'users removal' in chck_values:
-        df['clean_text'] = df['clean_text'].str.replace('@[\\w]+', '', regex=True)  # remove users
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('@[\\w]+', '', regex=True)  # remove users
     if 'hashtags removal' in chck_values:
-        df['clean_text'] = df['clean_text'].str.replace('#\\w+', '', regex=True)  # remove hashtags
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('#\\w+', '', regex=True)  # remove hashtags
     if 'numerical values removal' in chck_values:
-        df['clean_text'] = df['clean_text'].str.replace('\\d+', '', regex=True)  # remove numbers
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('\\d+', '', regex=True)  # remove numbers
     if 'symbols removal' in chck_values:
         for char in special_chars:
-            df['clean_text'] = df['clean_text'].str.replace(char, '')  # special characters
+            app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace(char, '')  # special characters
 
     # remove stopwords
     # nltk.download()
     stopwords = nltk.corpus.stopwords.words('english')
     if 'stopwords removal' in chck_values:
-        df['clean_text'] = df['clean_text'].apply(
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].apply(
             lambda x: ' '.join([word for word in x.split() if word not in stopwords]))
-    # df = stemming(df)
+    # app.df_preprocessed = stemming(app.df_preprocessed)
     return dbc.Container(
-        [dash_table.DataTable(df[:4].to_dict('records'), [{"name": i, "id": i} for i in df.columns], id='tbl',
+        [dash_table.DataTable(app.df_preprocessed[:4].to_dict('records'), [{"name": i, "id": i} for i in app.df_preprocessed.columns], id='tbl',
                               style_data={
                                   'whiteSpace': 'normal',
                                   'height': 'auto',

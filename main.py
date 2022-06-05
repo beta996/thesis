@@ -12,6 +12,7 @@ import feature_selection
 import load_data
 import preprocess
 import visualize
+import classifier
 from app import app, df_full
 
 nltk.download('punkt')
@@ -47,7 +48,8 @@ sidebar = html.Div(
                 dbc.NavLink("Preprocess", href="/preprocess", active="exact"),
                 dbc.NavLink("Visualize", href="/visualize", active="exact"),
                 dbc.NavLink("Feature extraction", href="/feature-extraction", active="exact"),
-                dbc.NavLink("Feature selection", href="/feature-selection", active="exact")
+                dbc.NavLink("Feature selection", href="/feature-selection", active="exact"),
+                dbc.NavLink("Classifier", href="/classifier", active="exact")
 
             ],
             vertical=True,
@@ -76,6 +78,8 @@ def render_page_content(pathname):
         return feature_extraction.page_content()
     elif pathname == "/feature-selection":
         return feature_selection.page_content()
+    elif pathname == "/classifier":
+        return classifier.page_content()
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(
         [

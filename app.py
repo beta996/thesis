@@ -10,7 +10,9 @@ VALID_USERNAME_PASSWORD_PAIRS = {
 }
 
 df_full = pd.DataFrame()
-df_vect = pd.DataFrame()
+df_preprocessed = pd.DataFrame()
+df_feature_extraction = pd.DataFrame()
+df_feature_selection = pd.DataFrame()
 
 df1 = pd.read_csv('./datasets/Tweets1.csv')
 df2 = pd.read_csv('./datasets/Reddit_Data.csv')

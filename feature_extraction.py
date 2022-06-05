@@ -1,7 +1,7 @@
 import dash_bootstrap_components as dbc
 import numpy as np
 import pandas as pd
-from dash import html, Output, Input, dash_table, State
+from dash import html, Output, Input, dash_table, State, dcc
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 import app
@@ -44,7 +44,6 @@ def page_content():
                                  title="TF-IDF",
                              ),
                          ]),
-                     html.P("Our "),
                      html.H5("Choose feature extraction method: "),
                      dbc.Select(
                          id="select feature extraction",
@@ -55,14 +54,14 @@ def page_content():
                          value="2"
                      ),
                      html.H4("First 4 records from your data:"),
-                     html.Div(id='feature extraction df'),
+                     dcc.Loading(html.Div(id='feature extraction df')),
                      html.P(),
                      dbc.Modal(
                          [
                              dbc.ModalHeader(dbc.ModalTitle("BOW")),
                              html.Div([html.P('Lets take 2 examplary posts:'),
-                                       html.P(app.df_full['clean_text'][1], style={"font-weight": "bold"}),
-                                       html.P(app.df_full['clean_text'][2], style={"font-weight": "bold"})
+                                       html.P(app.df_preprocessed['clean_text'][1], style={"font-weight": "bold"}),
+                                       html.P(app.df_preprocessed['clean_text'][2], style={"font-weight": "bold"})
                                        ]),
                              html.Div(id='explanation div bow'),
                              dbc.Button("Next step", id='next step bow')
@@ -89,8 +88,8 @@ def page_content():
 @app.app.callback(Output('explanation div bow', 'children'),
               Input('next step bow', 'n_clicks'))
 def next_step_submit_bow(n_clicks):
-    first_text = app.df_full['clean_text'][1]
-    second_text = app.df_full['clean_text'][2]
+    first_text = app.df_preprocessed['clean_text'][1]
+    second_text = app.df_preprocessed['clean_text'][2]
     # distinct_tokens = [word for word in (first_text + second_text).split()]
     l_doc1 = first_text.split()
     l_doc2 = second_text.split()
@@ -174,9 +173,9 @@ def toggle_modal_tfidf(n1, is_open):
 )
 def display_feature_extraction_df(choice):
     if choice == "1":
-        return vectoization(app.df_full, "bow")
+        return vectoization(app.df_preprocessed, "bow")
     else:
-        return vectoization(app.df_full, "tfidf")
+        return vectoization(app.df_preprocessed, "tfidf")
 
 
 def vectoization(df, type):
@@ -185,11 +184,11 @@ def vectoization(df, type):
     elif type == 'bow':
         vectorizer = CountVectorizer()
     x = vectorizer.fit_transform(df.loc[:, 'clean_text'])
-    app.df_vect = pd.DataFrame(x.toarray(), columns=vectorizer.get_feature_names_out())
+    app.df_feature_extraction = pd.DataFrame(x.toarray(), columns=vectorizer.get_feature_names_out())
 
     return dbc.Container(
-        [dash_table.DataTable(app.df_vect[:5].to_dict('records'), [{"name": i, "id": j} for i, j in
+        [dash_table.DataTable(app.df_feature_extraction[:5].to_dict('records'), [{"name": i, "id": j} for i, j in
                                                                    zip(vectorizer.get_feature_names_out(),
-                                                                       app.df_vect.columns)],
+                                                                       app.df_feature_extraction.columns)],
                               style_table={'overflowX': 'auto'}),
-         html.P(f"Shape: {app.df_vect.shape}")])
+         html.P(f"Shape: {app.df_feature_extraction.shape}")])
