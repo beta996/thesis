@@ -16,38 +16,27 @@ import app
 def page_content():
     return html.Div([
         html.H2('Visualization'),
-        dcc.Tabs(id="tabs-graph", value='pie-chart', children=[
+        dcc.Tabs(id="tabs", value='pie-chart', children=[
             dcc.Tab(label='Pie chart', value='pie-chart'),
             dcc.Tab(label='Bar charts', value='bar-chart'),
             dcc.Tab(label='Histograms', value='histogram'),
             dcc.Tab(label='Wordcloud', value='wordcloud')
         ]),
-        html.Div(id='freq dropdown'),
-        dcc.Graph(id='tabs-content-graph'),
-        html.Div(id='wordcloud')
+        dcc.Loading(html.Div(id='tab-content')),
     ])
 
 
-@app.app.callback(Output('freq dropdown', 'children'),
-                  Output('tabs-content-graph', 'figure'),
-                  Output('wordcloud', 'children'),
-                  Input('tabs-graph', 'value'))
+@app.app.callback(Output('tab-content', 'children'),
+                  Input('tabs', 'value'))
 def render_content(tab):
     if tab == 'pie-chart':
         categories = app.df_preprocessed.groupby('category', as_index=False).count().rename(
             columns={'clean_text': 'Total_Numbers'})
-        return None, px.pie(categories, values='Total_Numbers', names='category'), None
+        return dcc.Graph(figure=px.pie(categories, values='Total_Numbers', names='category'))
     if tab == 'bar-chart':
         freq_df = draw_frequebcy_bars(app.df_preprocessed[app.df_preprocessed['category'] == 1]['clean_text'])
-        # return px.bar(freq_df, x='word', y='count'
-        #               )
-        return dbc.DropdownMenu(label="Choose sentiment to display...", children=[
-            dbc.DropdownMenuItem("Positive"),
-            dbc.DropdownMenuItem("Negative"),
-            dbc.DropdownMenuItem("Neutral"),
-        ]), px.bar(freq_df,
-                   x='word',
-                   y='count'), None
+        return [dcc.Dropdown(["Positive", "Negative", "Neutral"], "Positive", searchable=False, id='bar-chart-dropdown'),
+                dcc.Graph(figure=px.bar(freq_df, x='word', y='count'), id='bar-chart-graph')]
     if tab == 'histogram':
         tweets_stats = pd.DataFrame()
         tweets_stats["clean_text"] = app.df_preprocessed["clean_text"].astype(str)
@@ -69,12 +58,25 @@ def render_content(tab):
             title_text="Histogram of the lengths of the posts"
         )
 
-        return None, fig.update_xaxes(range=[0, 450]), None
+        return dcc.Graph(figure=fig.update_xaxes(range=[0, 450]))
     if tab == 'wordcloud':
         img = io.BytesIO()
         plot_wordcloud().save(img, format='PNG')
         src = 'data:image/png;base64,{}'.format(base64.b64encode(img.getvalue()).decode())
-        return None, None, html.Img(src=src)
+        return html.Img(src=src)
+
+
+@app.app.callback(Output('bar-chart-graph', 'figure'),
+                  Input('bar-chart-dropdown', 'value'))
+def update_bar_chart_graph(sentiment):
+    if sentiment == 'Positive':
+        freq_df = draw_frequebcy_bars(app.df_preprocessed[app.df_preprocessed['category'] == 1]['clean_text'])
+    elif sentiment == 'Neutral':
+        freq_df = draw_frequebcy_bars(app.df_preprocessed[app.df_preprocessed['category'] == 0]['clean_text'])
+    else:
+        freq_df = draw_frequebcy_bars(app.df_preprocessed[app.df_preprocessed['category'] == -1]['clean_text'])
+
+    return px.bar(freq_df, x='word', y='count')
 
 
 def plot_wordcloud():

@@ -175,9 +175,11 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
         best_params_nb, best_score_nb = train_nb(nb_alpha, training_df)
         best_params_svm, best_score_svm = train_SVM(c, kernel, degree, training_df)
         best_params_dt, best_score_dt = train_dt(splitter, max_depth, max_features, training_df)
+        app.run_jobs.append({"algotithm":"nb", "congig":{best_params_nb}, "best_score":best_score_nb})
         return f"NB with {best_params_nb} finished! Score = {best_score_nb} \n" \
                f"SVM with {best_params_svm} finished! Score = {best_score_svm} \n" \
-               f"DT with {best_params_dt} finished! Score = {best_score_dt} \n"
+               f"DT with {best_params_dt} finished! Score = {best_score_dt} \n" \
+                f"{app.run_jobs}"
 
 
 def train_nb(nb_alpha, training_df):

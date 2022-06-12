@@ -1,7 +1,7 @@
 import pandas as pd
 from dash import html, dcc, dash_table, Output, Input
 import dash_bootstrap_components as dbc
-from sklearn.feature_selection import SelectPercentile, chi2, SelectKBest
+from sklearn.feature_selection import SelectPercentile, chi2
 import app
 import plotly.express as px
 
@@ -16,7 +16,7 @@ def page_content():
                          "Feature selection is s a process of extracting the most relevant features from the dataset."
                          " It can help with a problem of too many columns in the vectorized dataframe."),
                      html.Ul(["Statistical tests: ", html.Li("Chi square Test")]),
-                     dcc.Slider(1, 100, 1, value=50, marks=None,
+                     dcc.Slider(1, 100, 1, value=50,
                                 tooltip={"placement": "bottom", "always_visible": True},
                                 id='slider feature selection'),
                      html.Div(selectPercentileChi(app.df_feature_extraction, 50), id='selected df'),
