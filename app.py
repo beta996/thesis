@@ -15,8 +15,11 @@ df_full = pd.DataFrame()
 df_preprocessed = pd.DataFrame()
 df_feature_extraction = pd.DataFrame()
 df_feature_selection = pd.DataFrame()
-run_jobs = []
+run_jobs = pd.DataFrame(columns=["algorithm", "config", "best_score", "time"])
 
+# from sklearn import datasets
+# df_feature_selection = datasets.load_iris()
+# df_feature_selection['category'] = [1 for _ in range df_feature_selection.sh]
 df1 = pd.read_csv('./datasets/Tweets1.csv')
 df2 = pd.read_csv('./datasets/Reddit_Data.csv')
 df3 = pd.read_csv('./datasets/apple-twitter-sentiment-texts.csv')

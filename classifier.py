@@ -125,8 +125,9 @@ def take_user_classifiers(value):
                             html.Small("max_depth - The maximum depth of the tree.", className="text-muted"),
                             dcc.RangeSlider(0, 2000, 100, value=[100, 200], id='max_depth slider'),
                             html.P("max_features", className="text-success"),
-                            html.Small("max_features -  The number of features to consider when looking for the best split",
-                                       className="text-muted"),
+                            html.Small(
+                                "max_features -  The number of features to consider when looking for the best split",
+                                className="text-muted"),
                             dbc.Checklist(
                                 options=[
                                     {"label": "auto", "value": 'auto'},
@@ -164,7 +165,8 @@ def display_degree_if_poly_chosen(value):
 
 @app.app.callback(Output('all params', 'children'), Input('submit params', 'n_clicks'), State('nb slider', 'value'),
                   State('c slider', 'value'), State('kernel-input', 'value'), State('degree slider', 'value'),
-                  State('splitter checklist', 'value'), State('max_depth slider', 'value'), State('max_features checklist', 'value'))
+                  State('splitter checklist', 'value'), State('max_depth slider', 'value'),
+                  State('max_features checklist', 'value'))
 def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth, max_features):
     df_feature_selection_full = app.df_feature_selection.copy()
     df_feature_selection_full['category'] = app.df_full['category']
@@ -172,14 +174,25 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
     if n_clicks > 0:
         # time.sleep(5)
 
-        best_params_nb, best_score_nb = train_nb(nb_alpha, training_df)
-        best_params_svm, best_score_svm = train_SVM(c, kernel, degree, training_df)
-        best_params_dt, best_score_dt = train_dt(splitter, max_depth, max_features, training_df)
-        app.run_jobs.append({"algotithm":"nb", "congig":{best_params_nb}, "best_score":best_score_nb})
-        return f"NB with {best_params_nb} finished! Score = {best_score_nb} \n" \
-               f"SVM with {best_params_svm} finished! Score = {best_score_svm} \n" \
-               f"DT with {best_params_dt} finished! Score = {best_score_dt} \n" \
-                f"{app.run_jobs}"
+        best_params_nb, best_score_nb, time_nb, results_nb = train_nb(list(range(nb_alpha[0],nb_alpha[-1] + 1)), training_df)
+        best_params_svm, best_score_svm, time_svm, results_svm = train_SVM(list(range(c[0],c[-1] + 1)), kernel, degree, training_df)
+        best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter, max_depth, max_features, training_df)
+        app.run_jobs = app.run_jobs.append(
+            {"algorithm": "nb", "config": str(best_params_nb), "best_score": best_score_nb, "time": time_nb},
+            ignore_index=True)
+        return [html.P(f"NB with {best_params_nb} finished! Score = {best_score_nb} \n"
+                       f"SVM with {best_params_svm} finished! Score = {best_score_svm} \n"
+                       f"DT with {best_params_dt} finished! Score = {best_score_dt} \n"),
+                dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_nb["params"]),
+                                                    pd.DataFrame(results_nb["mean_test_score"], columns=["Accuracy"])],
+                                                   axis=1), striped=True, bordered=True, hover=True),
+                dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_svm["params"]),
+                                                    pd.DataFrame(results_svm["mean_test_score"], columns=["Accuracy"])],
+                                                   axis=1), striped=True, bordered=True, hover=True),
+                dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_dt["params"]),
+                                                    pd.DataFrame(results_dt["mean_test_score"], columns=["Accuracy"])],
+                                                   axis=1), striped=True, bordered=True, hover=True)
+                ]
 
 
 def train_nb(nb_alpha, training_df):
@@ -195,7 +208,7 @@ def train_nb(nb_alpha, training_df):
 
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
-    return grid_search.best_estimator_.get_params(), grid_search.best_score_
+    return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
 def train_SVM(c, kernel, degree, training_df):
@@ -212,7 +225,7 @@ def train_SVM(c, kernel, degree, training_df):
     }
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
-    return grid_search.best_estimator_.get_params(), grid_search.best_score_
+    return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
 def train_dt(splitter, max_depth, max_features, training_df):
@@ -230,4 +243,4 @@ def train_dt(splitter, max_depth, max_features, training_df):
 
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
-    return grid_search.best_estimator_.get_params(), grid_search.best_score_
+    return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
