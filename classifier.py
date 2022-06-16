@@ -1,7 +1,9 @@
 import time
+from datetime import datetime
 
 import dash_bootstrap_components as dbc
 import numpy as np
+import plotly.express as px
 import pandas as pd
 from dash import html, Output, Input, dash_table, State, dcc, Dash
 from sklearn.pipeline import Pipeline
@@ -12,6 +14,8 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
+
+import db
 
 
 def page_content():
@@ -174,18 +178,32 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
     if n_clicks > 0:
         # time.sleep(5)
 
-        best_params_nb, best_score_nb, time_nb, results_nb = train_nb(list(range(nb_alpha[0],nb_alpha[-1] + 1)), training_df)
-        best_params_svm, best_score_svm, time_svm, results_svm = train_SVM(list(range(c[0],c[-1] + 1)), kernel, degree, training_df)
+        best_params_nb, best_score_nb, time_nb, results_nb = train_nb(list(range(nb_alpha[0], nb_alpha[-1] + 1)),
+                                                                      training_df)
+        best_params_svm, best_score_svm, time_svm, results_svm = train_SVM(list(range(c[0], c[-1] + 1)), kernel,
+                                                                           list(range(degree[0], degree[-1] + 1)),
+                                                                           training_df)
         best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter, max_depth, max_features, training_df)
         app.run_jobs = app.run_jobs.append(
-            {"algorithm": "nb", "config": str(best_params_nb), "best_score": best_score_nb, "time": time_nb},
+            {"Time": datetime.now().strftime("%d/%m/%Y %H:%M:%S"), "algorithm": "nb", "config": str(best_params_nb),
+             "best_score": best_score_nb, "time": time_nb},
             ignore_index=True)
+        nb_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        insert_nb = """
+        INSERT INTO history.historical_jobs VALUES
+        ('2022-12-06 12:54:54',  'NB', 'hh', '78.9', '23:28:45');
+        """
+        db.execute_query(db.connection, insert_nb)
+        nb = pd.concat([pd.DataFrame(results_nb["params"]),
+                        pd.DataFrame(results_nb["mean_test_score"], columns=["Accuracy"])],
+                       axis=1)
         return [html.P(f"NB with {best_params_nb} finished! Score = {best_score_nb} \n"
                        f"SVM with {best_params_svm} finished! Score = {best_score_svm} \n"
                        f"DT with {best_params_dt} finished! Score = {best_score_dt} \n"),
                 dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_nb["params"]),
                                                     pd.DataFrame(results_nb["mean_test_score"], columns=["Accuracy"])],
                                                    axis=1), striped=True, bordered=True, hover=True),
+                dcc.Graph(figure=px.line(nb,x="clf__alpha", y="Accuracy", markers=True, title="Alpha vs Accuracy for NB")),
                 dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_svm["params"]),
                                                     pd.DataFrame(results_svm["mean_test_score"], columns=["Accuracy"])],
                                                    axis=1), striped=True, bordered=True, hover=True),

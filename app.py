@@ -4,6 +4,8 @@ from dash import dash
 import dash_bootstrap_components as dbc
 from collections import defaultdict
 
+import db
+
 app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR, dbc.icons.BOOTSTRAP])
 
 VALID_USERNAME_PASSWORD_PAIRS = {
@@ -16,6 +18,7 @@ df_preprocessed = pd.DataFrame()
 df_feature_extraction = pd.DataFrame()
 df_feature_selection = pd.DataFrame()
 run_jobs = pd.DataFrame(columns=["algorithm", "config", "best_score", "time"])
+connection = db.connection
 
 # from sklearn import datasets
 # df_feature_selection = datasets.load_iris()

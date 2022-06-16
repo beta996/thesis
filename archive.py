@@ -13,6 +13,13 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
 
+import db
+
 
 def page_content():
-    return dbc.Table.from_dataframe(app.run_jobs, striped=True, bordered=True, hover=True)
+    q1 = """
+    SELECT * FROM history.historical_jobs;
+    """
+    # db.read_query()
+    result_dataFrame = pd.read_sql(q1, app.connection)
+    return dbc.Table.from_dataframe(result_dataFrame, striped=True, bordered=True, hover=True)
