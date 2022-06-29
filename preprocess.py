@@ -3,6 +3,7 @@ import nltk
 from dash import html, Input, Output, State, dash_table
 
 import app
+import main
 
 
 def page_content():
@@ -77,11 +78,14 @@ def page_content():
 
 
 @app.app.callback(Output('compare-data', 'children'),
-              Input('submit-btn', 'n_clicks'),
-              State('checklist', 'value'))
+                  Output("alert-bar", "children"),
+                  Input('submit-btn', 'n_clicks'),
+                  State('checklist', 'value'))
 def submit_preprocessing(n_clicks, chck_values):
     if n_clicks >= 1:
-        return preprocess(chck_values)
+        app.current_job.preprocessing_steps = chck_values
+        return preprocess(chck_values), app.render_alert("First you need to do feature extraction! Go to ",
+                                                          'Feature extraction', "danger", '/feature-extraction')
 
 
 def preprocess(chck_values: []):
@@ -93,17 +97,22 @@ def preprocess(chck_values: []):
     if 'Lowercasing' in chck_values:
         app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.lower()  # convert to lowercase
     if 'hyperlinks removal' in chck_values:
-        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('http?:\/\/[^\s]+|www\.[^\s]', '',
-                                                        regex=True)  # remove hyperlinks
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('http?:\/\/[^\s]+|www\.[^\s]',
+                                                                                          '',
+                                                                                          regex=True)  # remove hyperlinks
     if 'users removal' in chck_values:
-        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('@[\\w]+', '', regex=True)  # remove users
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('@[\\w]+', '',
+                                                                                          regex=True)  # remove users
     if 'hashtags removal' in chck_values:
-        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('#\\w+', '', regex=True)  # remove hashtags
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('#\\w+', '',
+                                                                                          regex=True)  # remove hashtags
     if 'numerical values removal' in chck_values:
-        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('\\d+', '', regex=True)  # remove numbers
+        app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace('\\d+', '',
+                                                                                          regex=True)  # remove numbers
     if 'symbols removal' in chck_values:
         for char in special_chars:
-            app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace(char, '')  # special characters
+            app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].str.replace(char,
+                                                                                              '')  # special characters
 
     # remove stopwords
     # nltk.download()
@@ -113,7 +122,8 @@ def preprocess(chck_values: []):
             lambda x: ' '.join([word for word in x.split() if word not in stopwords]))
     # app.df_preprocessed = stemming(app.df_preprocessed)
     return dbc.Container(
-        [dash_table.DataTable(app.df_preprocessed[:4].to_dict('records'), [{"name": i, "id": i} for i in app.df_preprocessed.columns], id='tbl',
+        [dash_table.DataTable(app.df_preprocessed[:4].to_dict('records'),
+                              [{"name": i, "id": i} for i in app.df_preprocessed.columns], id='tbl',
                               style_data={
                                   'whiteSpace': 'normal',
                                   'height': 'auto',

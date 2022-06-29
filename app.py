@@ -1,12 +1,17 @@
+import uuid
+
 import dash_auth
 import pandas as pd
-from dash import dash
+from dash import dash, html, dcc
 import dash_bootstrap_components as dbc
 from collections import defaultdict
+from dash_extensions.enrich import Output, DashProxy, Input, MultiplexerTransform
 
 import db
+import job
 
-app = dash.Dash(external_stylesheets=[dbc.themes.SOLAR, dbc.icons.BOOTSTRAP])
+app = DashProxy(external_stylesheets=[dbc.themes.SOLAR, dbc.icons.BOOTSTRAP], transforms=[MultiplexerTransform()])
+
 
 VALID_USERNAME_PASSWORD_PAIRS = {
     'hello': 'world'
@@ -19,6 +24,8 @@ df_feature_extraction = pd.DataFrame()
 df_feature_selection = pd.DataFrame()
 run_jobs = pd.DataFrame(columns=["algorithm", "config", "best_score", "time"])
 connection = db.connection
+current_job = job.Job(datasets=[], preprocessing_steps=[], feature_extraction_method='',
+                      feature_selection_percent=0)
 
 # from sklearn import datasets
 # df_feature_selection = datasets.load_iris()
@@ -35,3 +42,14 @@ auth = dash_auth.BasicAuth(
     app,
     VALID_USERNAME_PASSWORD_PAIRS
 )
+
+
+def render_alert(message: str, link: str, color: str, url: str):
+    return dbc.Alert(
+        [
+            html.I(className="bi bi-x-octagon-fill me-2"),
+            html.P(message), dcc.Link(link, url)
+        ],
+        color=color,
+        className="d-flex align-items-center",
+    )

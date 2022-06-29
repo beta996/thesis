@@ -1,4 +1,5 @@
 import time
+import uuid
 from datetime import datetime
 
 import dash_bootstrap_components as dbc
@@ -6,6 +7,7 @@ import numpy as np
 import plotly.express as px
 import pandas as pd
 from dash import html, Output, Input, dash_table, State, dcc, Dash
+from sklearn.metrics import classification_report, accuracy_score
 from sklearn.pipeline import Pipeline
 
 import app
@@ -16,6 +18,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
 
 import db
+import job
 
 
 def page_content():
@@ -177,23 +180,24 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
     training_df, test_df = train_test_split(df_feature_selection_full, test_size=0.2)
     if n_clicks > 0:
         # time.sleep(5)
+        app.current_job.id_uuid = uuid.uuid4()
+        insert_job = "INSERT INTO history.jobs VALUES ('%s','%s','%s','%s',%d);" % (
+            app.current_job.id_uuid, ",".join(app.current_job.datasets), ",".join(app.current_job.preprocessing_steps),
+            app.current_job.feature_extraction_method, app.current_job.feature_selection_percent)
+        db.execute_query(db.connection, insert_job)
 
         best_params_nb, best_score_nb, time_nb, results_nb = train_nb(list(range(nb_alpha[0], nb_alpha[-1] + 1)),
-                                                                      training_df)
+                                                                      training_df, test_df)
         best_params_svm, best_score_svm, time_svm, results_svm = train_SVM(list(range(c[0], c[-1] + 1)), kernel,
                                                                            list(range(degree[0], degree[-1] + 1)),
-                                                                           training_df)
-        best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter, max_depth, max_features, training_df)
+                                                                           training_df, test_df)
+        best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter, list(range(max_depth[0], max_depth[-1]+1, 100)), max_features, training_df,
+                                                                      test_df)
         app.run_jobs = app.run_jobs.append(
             {"Time": datetime.now().strftime("%d/%m/%Y %H:%M:%S"), "algorithm": "nb", "config": str(best_params_nb),
              "best_score": best_score_nb, "time": time_nb},
             ignore_index=True)
-        nb_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        insert_nb = """
-        INSERT INTO history.historical_jobs VALUES
-        ('2022-12-06 12:54:54',  'NB', 'hh', '78.9', '23:28:45');
-        """
-        db.execute_query(db.connection, insert_nb)
+
         nb = pd.concat([pd.DataFrame(results_nb["params"]),
                         pd.DataFrame(results_nb["mean_test_score"], columns=["Accuracy"])],
                        axis=1)
@@ -203,7 +207,8 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
                 dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_nb["params"]),
                                                     pd.DataFrame(results_nb["mean_test_score"], columns=["Accuracy"])],
                                                    axis=1), striped=True, bordered=True, hover=True),
-                dcc.Graph(figure=px.line(nb,x="clf__alpha", y="Accuracy", markers=True, title="Alpha vs Accuracy for NB")),
+                dcc.Graph(
+                    figure=px.line(nb, x="clf__alpha", y="Accuracy", markers=True, title="Alpha vs Accuracy for NB")),
                 dbc.Table.from_dataframe(pd.concat([pd.DataFrame(results_svm["params"]),
                                                     pd.DataFrame(results_svm["mean_test_score"], columns=["Accuracy"])],
                                                    axis=1), striped=True, bordered=True, hover=True),
@@ -213,7 +218,7 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
                 ]
 
 
-def train_nb(nb_alpha, training_df):
+def train_nb(nb_alpha, training_df, test_df):
     pipeline = Pipeline(
         [
             ("clf", MultinomialNB())
@@ -224,12 +229,12 @@ def train_nb(nb_alpha, training_df):
         "clf__alpha": nb_alpha,
     }
 
-    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
+    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
-def train_SVM(c, kernel, degree, training_df):
+def train_SVM(c, kernel, degree, training_df, test_df):
     pipeline = Pipeline(
         [
             ("clf", SVC())
@@ -241,12 +246,12 @@ def train_SVM(c, kernel, degree, training_df):
         "clf__kernel": kernel,
         "clf__degree": degree
     }
-    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
+    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
-def train_dt(splitter, max_depth, max_features, training_df):
+def train_dt(splitter, max_depth, max_features, training_df, test_df):
     pipeline = Pipeline(
         [
             ("clf", DecisionTreeClassifier())
@@ -259,6 +264,15 @@ def train_dt(splitter, max_depth, max_features, training_df):
         "clf__max_features": max_features
     }
 
-    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1)  # defaut k=5
+    grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
+    predicts = grid_search.best_estimator_.predict(test_df.iloc[:, :-1])
+    print(classification_report(test_df['category'], predicts, target_names=['-1', '0', '1']))
+    insert_nb = """
+            INSERT INTO history.historical_jobs VALUES
+            ('%s','%s',  'DT', 'blabla', '%f', '%f');""" % (
+        app.current_job.id_uuid, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        accuracy_score(test_df['category'], predicts), grid_search.refit_time_)
+
+    db.execute_query(db.connection, insert_nb)
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_

@@ -108,12 +108,16 @@ def toggle_modal(n1, n2, n3, is_open):
     if ctx.triggered[0]['value'] > 0:
         if ctx.triggered[0]['prop_id']:
             if button_id == 'apple btn':
+                app.current_job.datasets.append("apple dataset")
+                # app.current_job.__setattr__('dataset', 'apple dataset')
                 app.df_full = pd.concat([app.df_full, app.df3], ignore_index=True)
                 return not is_open, True, "Added", False, "Add", False, "Add"
             if button_id == 'reddit btn':
+                app.current_job.datasets.append("reddit dataset")
                 app.df_full = pd.concat([app.df_full, app.df2], ignore_index=True)
                 return not is_open, False, "Add", True, "Added", False, "Add"
             if button_id == 'airline btn':
+                app.current_job.datasets.append("airline dataset")
                 app.df_full = pd.concat([app.df_full, app.df1], ignore_index=True)
                 return not is_open, False, "Add", False, "Add", True, "Added"
     app.df_full.dropna(axis=0, inplace=True)

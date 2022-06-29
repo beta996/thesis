@@ -1,27 +1,43 @@
 import pandas as pd
-from dash import html, dcc, dash_table, Output, Input
+from dash import html, dcc, dash_table, Output, Input, State
 import dash_bootstrap_components as dbc
 from sklearn.feature_selection import SelectPercentile, chi2
 import app
 import plotly.express as px
 
+from app import render_alert
+
 
 def page_content():
-    bar_plot = selectKBest(app.df_feature_extraction,10)
+    bar_plot = selectKBest(app.df_feature_extraction, 10)
     return dcc.Loading(html.Div([html.H1("Feature Selection"),
-                     html.P(f"Congratulations! Your vectorized dataframe has {app.df_feature_extraction.shape[1]} columns!"
-                            f" That's a lot! However, A large number of irrelevant features increases the training "
-                            f"time exponentially and increase the risk of overfitting."),
-                     html.P(
-                         "Feature selection is s a process of extracting the most relevant features from the dataset."
-                         " It can help with a problem of too many columns in the vectorized dataframe."),
-                     html.Ul(["Statistical tests: ", html.Li("Chi square Test")]),
-                     dcc.Slider(1, 100, 1, value=50,
-                                tooltip={"placement": "bottom", "always_visible": True},
-                                id='slider feature selection'),
-                     html.Div(selectPercentileChi(app.df_feature_extraction, 50), id='selected df'),
-                     html.Div(dcc.Graph(figure=bar_plot))
-                     ]))
+                                 html.P(
+                                     f"Congratulations! Your vectorized dataframe has {app.df_feature_extraction.shape[1]} columns!"
+                                     f" That's a lot! However, A large number of irrelevant features increases the training "
+                                     f"time exponentially and increase the risk of overfitting."),
+                                 html.P(
+                                     "Feature selection is s a process of extracting the most relevant features from the dataset."
+                                     " It can help with a problem of too many columns in the vectorized dataframe."),
+                                 html.Ul(["Statistical tests: ", html.Li("Chi square Test")]),
+                                 dcc.Slider(1, 100, 1, value=50,
+                                            tooltip={"placement": "bottom", "always_visible": True},
+                                            id='slider feature selection'),
+                                 html.Div(selectPercentileChi(app.df_feature_extraction, 50), id='selected df'),
+                                 html.Div(dcc.Graph(figure=bar_plot)),
+                                 dbc.Button("Submit!", id='submit-feature-selection')
+                                 ]))
+
+
+@app.app.callback(Output('alert-bar', 'children'),
+                  Input('submit-feature-selection', 'n_clicks'),
+                  State('slider feature selection', 'value'))
+def update_alert(n_clicks, feature_selection_choice):
+    if n_clicks is not None and n_clicks > 0:
+        app.current_job.feature_selection_percent = feature_selection_choice
+        return render_alert("Finally you can do ", 'the classifier', "success", '/classifier')
+
+    else:
+        return render_alert("Time to do ", 'feature selection', "danger", '/feature-selection')
 
 
 @app.app.callback(Output('selected df', 'children'), Input('slider feature selection', 'value'))
@@ -35,8 +51,8 @@ def selectPercentileChi(vect_df, percentile):
     app.df_feature_selection = pd.DataFrame(X_new)
     return dbc.Container(
         [dash_table.DataTable(app.df_feature_selection[:5].to_dict('records'), [{"name": i, "id": j} for i, j in
-                                                                   zip(select.get_feature_names_out(),
-                                                                       app.df_feature_selection.columns)],
+                                                                                zip(select.get_feature_names_out(),
+                                                                                    app.df_feature_selection.columns)],
                               style_table={'overflowX': 'auto'}, id='tbl feature selection'),
          html.P(f"Shape: {app.df_feature_selection.shape}")])
 

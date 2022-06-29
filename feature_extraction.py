@@ -5,6 +5,7 @@ from dash import html, Output, Input, dash_table, State, dcc
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 
 import app
+from app import render_alert
 
 
 def page_content():
@@ -48,10 +49,9 @@ def page_content():
                      dbc.Select(
                          id="select feature extraction",
                          options=[
-                             {"label": "Bag-of-Words", "value": "1"},
-                             {"label": "TF-IDF", "value": "2"}
-                         ],
-                         value="2"
+                             {"label": "Bag-of-Words", "value": "Bag-of-Words"},
+                             {"label": "TF-IDF", "value": "TF-IDF"}
+                         ]
                      ),
                      html.H4("First 4 records from your data:"),
                      dcc.Loading(html.Div(id='feature extraction df')),
@@ -86,7 +86,7 @@ def page_content():
 
 
 @app.app.callback(Output('explanation div bow', 'children'),
-              Input('next step bow', 'n_clicks'))
+                  Input('next step bow', 'n_clicks'))
 def next_step_submit_bow(n_clicks):
     first_text = app.df_preprocessed['clean_text'][1]
     second_text = app.df_preprocessed['clean_text'][2]
@@ -125,7 +125,7 @@ def calculate_bow(wordset, l_doc):
 
 
 @app.app.callback(Output('explanation div tfidf', 'children'),
-              Input('next step tfidf', 'n_clicks'))
+                  Input('next step tfidf', 'n_clicks'))
 def next_step_submit_tfidf(n_clicks):
     if n_clicks == 1:
         return html.Div([html.P('TF-IDF is a combination of Term Frequency and Inverse Document Frequency.'),
@@ -150,8 +150,8 @@ def next_step_submit_tfidf(n_clicks):
 
 
 @app.app.callback(Output("modal bow", "is_open"),
-              [Input("try bow", "n_clicks")],
-              [State("modal bow", "is_open")])
+                  [Input("try bow", "n_clicks")],
+                  [State("modal bow", "is_open")])
 def toggle_modal_bow(n1, is_open):
     if n1:
         return not is_open
@@ -159,8 +159,8 @@ def toggle_modal_bow(n1, is_open):
 
 
 @app.app.callback(Output("modal tfidf", "is_open"),
-              [Input("try tfidf", "n_clicks")],
-              [State("modal tfidf", "is_open")])
+                  [Input("try tfidf", "n_clicks")],
+                  [State("modal tfidf", "is_open")])
 def toggle_modal_tfidf(n1, is_open):
     if n1:
         return not is_open
@@ -172,13 +172,15 @@ def toggle_modal_tfidf(n1, is_open):
     Input("select feature extraction", "value")
 )
 def display_feature_extraction_df(choice):
-    if choice == "1":
-        return vectoization(app.df_preprocessed, "bow")
+    if choice == "Bag-of-Words":
+        return vectorization(app.df_preprocessed, "bow")
+    elif choice == "TF-IDF":
+        return vectorization(app.df_preprocessed, "tfidf")
     else:
-        return vectoization(app.df_preprocessed, "tfidf")
+        return None
 
 
-def vectoization(df, type):
+def vectorization(df, type):
     if type == 'tfidf':
         vectorizer = TfidfVectorizer()
     elif type == 'bow':
@@ -188,7 +190,22 @@ def vectoization(df, type):
 
     return dbc.Container(
         [dash_table.DataTable(app.df_feature_extraction[:5].to_dict('records'), [{"name": i, "id": j} for i, j in
-                                                                   zip(vectorizer.get_feature_names_out(),
-                                                                       app.df_feature_extraction.columns)],
+                                                                                 zip(vectorizer.get_feature_names_out(),
+                                                                                     app.df_feature_extraction.columns)],
                               style_table={'overflowX': 'auto'}),
-         html.P(f"Shape: {app.df_feature_extraction.shape}")])
+         html.P(f"Shape: {app.df_feature_extraction.shape}"),
+         dbc.Button("Submit!", id='submit-feature-extraction')
+         ])
+
+
+@app.app.callback(Output('alert-bar', 'children'),
+                  Input('submit-feature-extraction', 'n_clicks'),
+                  State('select feature extraction', 'value'))
+def update_alert(n_clicks, feature_extraction_choice):
+    if n_clicks is not None and n_clicks > 0:
+        app.current_job.feature_extraction_method = feature_extraction_choice
+        return render_alert("Time to do ", 'feature selection', "danger", '/feature-selection')
+
+    else:
+        return render_alert("First you need to do feature extraction! Go to ", 'Feature extraction', "danger",
+                            '/feature-extraction')

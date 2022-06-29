@@ -18,6 +18,7 @@ def create_server_connection(host_name, user_name, user_password):
 
 
 def execute_query(connection, query):
+    print(query)
     cursor = connection.cursor()
     try:
         cursor.execute(query)

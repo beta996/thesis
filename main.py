@@ -1,11 +1,6 @@
-import base64
-import datetime
-import io
-
 import dash_bootstrap_components as dbc
 import nltk
-import pandas as pd
-from dash import Input, Output, dcc, html, dash_table, State
+from dash import Input, Output, dcc, html
 
 import archive
 import feature_extraction
@@ -14,7 +9,7 @@ import load_data
 import preprocess
 import visualize
 import classifier
-from app import app, df_full
+from app import app, current_job, render_alert
 
 nltk.download('punkt')
 
@@ -57,13 +52,30 @@ sidebar = html.Div(
             vertical=True,
             pills=True
         ),
+
     ],
     style=SIDEBAR_STYLE,
 )
 
+print(current_job)
+
+alert_bar = html.Div(render_alert("First you need to load the data! Go to", 'Data Load', "danger", '/load-data'),
+                     style={"margin-left": "18rem",
+                            "margin-right": "2rem"}, id='alert-bar')
+
+
+@app.callback(Output("alert-bar", "children"), [Input("comb-datasets-button", "n_clicks")])
+def update_alert(n_clicks):
+    if n_clicks is not None and n_clicks > 0:
+        return render_alert("Time to preprocess the data! Go to", 'Preprocessing', "danger", '/preprocess')
+
+    else:
+        return render_alert("First you need to load the data! Go to", 'Data Load', "danger", '/load-data')
+
+
 content = html.Div(id="page-content", style=CONTENT_STYLE)
 
-app.layout = html.Div([dcc.Location(id="url"), sidebar, content])
+app.layout = html.Div([dcc.Location(id="url"), sidebar, alert_bar, content])
 
 
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
