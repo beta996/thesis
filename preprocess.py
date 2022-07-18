@@ -1,7 +1,8 @@
 import dash_bootstrap_components as dbc
 import nltk
+import pandas as pd
 from dash import html, Input, Output, State, dash_table
-
+from nltk.stem import PorterStemmer
 import app
 import main
 
@@ -120,7 +121,8 @@ def preprocess(chck_values: []):
     if 'stopwords removal' in chck_values:
         app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].apply(
             lambda x: ' '.join([word for word in x.split() if word not in stopwords]))
-    # app.df_preprocessed = stemming(app.df_preprocessed)
+    if 'stemming' in chck_values:
+        stemming(app.df_preprocessed)
     return dbc.Container(
         [dash_table.DataTable(app.df_preprocessed[:4].to_dict('records'),
                               [{"name": i, "id": i} for i in app.df_preprocessed.columns], id='tbl',
@@ -141,3 +143,8 @@ def preprocess(chck_values: []):
                                   'textDecorationStyle': 'dotted',
                               }
                               )])
+
+def stemming(df:pd.DataFrame):
+    ps = PorterStemmer()
+    app.df_preprocessed['clean_text'] = app.df_preprocessed['clean_text'].apply(
+        lambda x: ' '.join([ps.stem(word) for word in x.split()]))

@@ -5,6 +5,7 @@ from dash import Input, Output, dcc, html
 import archive
 import feature_extraction
 import feature_selection
+import job_archive_details
 import load_data
 import preprocess
 import visualize
@@ -96,6 +97,8 @@ def render_page_content(pathname):
         return classifier.page_content()
     elif pathname == "/archive":
         return archive.page_content()
+    elif pathname.startswith("/job_archive_details"):
+        return job_archive_details.layout("".join([letter for letter in pathname if letter.isdigit()]))
 
     # If the user tries to reach a different page, return a 404 message
     return dbc.Jumbotron(

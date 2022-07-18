@@ -7,7 +7,7 @@ import numpy as np
 import plotly.express as px
 import pandas as pd
 from dash import html, Output, Input, dash_table, State, dcc, Dash
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.pipeline import Pipeline
 
 import app
@@ -231,6 +231,8 @@ def train_nb(nb_alpha, training_df, test_df):
 
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
+    predicts = grid_search.best_estimator_.predict(test_df.iloc[:, :-1])
+    insert_jobs_to_db(grid_search, training_df, test_df, predicts, 'NB')
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
@@ -248,6 +250,8 @@ def train_SVM(c, kernel, degree, training_df, test_df):
     }
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
+    predicts = grid_search.best_estimator_.predict(test_df.iloc[:, :-1])
+    insert_jobs_to_db(grid_search, training_df, test_df, predicts, 'SVM')
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
 
@@ -267,12 +271,18 @@ def train_dt(splitter, max_depth, max_features, training_df, test_df):
     grid_search = GridSearchCV(pipeline, parameters, n_jobs=-1, verbose=1, refit=True)  # defaut k=5
     grid_search.fit(training_df.iloc[:, :-1], training_df['category'])
     predicts = grid_search.best_estimator_.predict(test_df.iloc[:, :-1])
-    print(classification_report(test_df['category'], predicts, target_names=['-1', '0', '1']))
-    insert_nb = """
-            INSERT INTO history.historical_jobs VALUES
-            ('%s','%s',  'DT', 'blabla', '%f', '%f');""" % (
-        app.current_job.id_uuid, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        accuracy_score(test_df['category'], predicts), grid_search.refit_time_)
-
-    db.execute_query(db.connection, insert_nb)
+    insert_jobs_to_db(grid_search, training_df, test_df, predicts, 'DT')
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
+
+def insert_jobs_to_db(grid_search,training_df, test_df, predicts, alg_type):
+    print(classification_report(test_df['category'], predicts, target_names=['-1', '0', '1']))
+
+    cm = confusion_matrix(test_df['category'], predicts, labels=[-1, 0, 1])
+    cm = cm[::-1]
+    insert_dt = """
+                    INSERT INTO history.historical_jobs VALUES
+                    ('%s','%s',  '%s', 'blabla', '%f', '%f', '%s');""" % (
+        app.current_job.id_uuid, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), alg_type,
+        accuracy_score(test_df['category'], predicts), grid_search.refit_time_, cm)
+
+    db.execute_query(db.connection, insert_dt)
