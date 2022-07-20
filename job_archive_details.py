@@ -11,15 +11,17 @@ dash.register_page(__name__, path_template="/job_archive_details/<job_id>")
 
 def layout(report_id=None):
     # print(dash.page_registry)
-    q2 = """    
-                SELECT *  
-        FROM history.historical_jobs order by execution_time;  
-            """
+    # q2 = """
+    #             SELECT *
+    #     FROM history.historical_jobs order by execution_time;
+    #         """
     # db.read_query()
 
-    result_dataFrame = pd.read_sql(q2, app.connection)
+    #result_dataFrame = pd.read_sql(q2, app.connection)
+    result_dataFrame = pd.read_sql_query("SELECT * FROM historical_jobs hj left join jobs j on hj.id=j.id order by execution_time;",
+                                         app.connection)
 
-    cm = result_dataFrame.iloc[int(report_id), -1]
+    cm = result_dataFrame.iloc[int(report_id), -6]
     cm = cm.split("\n")
     for i, ele in enumerate(cm):
         cm[i] = ele.replace('[', '').replace(']', '').split(" ")
@@ -34,5 +36,5 @@ def layout(report_id=None):
 
 
     return html.Div([dcc.Graph(figure=fig), html.Div(
-        f"The user requested report ID: {report_id}."
+        f"Details: {result_dataFrame.iloc[int(report_id), -4:]}."
     )])

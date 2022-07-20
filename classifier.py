@@ -9,7 +9,7 @@ import pandas as pd
 from dash import html, Output, Input, dash_table, State, dcc, Dash
 from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
 from sklearn.pipeline import Pipeline
-
+import sqlite3
 import app
 
 from sklearn.naive_bayes import MultinomialNB
@@ -181,17 +181,26 @@ def display_and_train(n_clicks, nb_alpha, c, kernel, degree, splitter, max_depth
     if n_clicks > 0:
         # time.sleep(5)
         app.current_job.id_uuid = uuid.uuid4()
-        insert_job = "INSERT INTO history.jobs VALUES ('%s','%s','%s','%s',%d);" % (
-            app.current_job.id_uuid, ",".join(app.current_job.datasets), ",".join(app.current_job.preprocessing_steps),
-            app.current_job.feature_extraction_method, app.current_job.feature_selection_percent)
-        db.execute_query(db.connection, insert_job)
+        cursor = app.connection.cursor()
+        cursor.execute("INSERT INTO jobs VALUES (?, ?, ?, ?, ?)",
+                       (str(app.current_job.id_uuid), ",".join(app.current_job.datasets)
+                        , ",".join(app.current_job.preprocessing_steps),
+                        app.current_job.feature_extraction_method,
+                        int(app.current_job.feature_selection_percent),))
+        app.connection.commit()
+
+        # insert_job = text("INSERT INTO history.jobs VALUES ('%s','%s','%s','%s',%d);" % (
+        #     app.current_job.id_uuid, ",".join(app.current_job.datasets), ",".join(app.current_job.preprocessing_steps),
+        #     app.current_job.feature_extraction_method, app.current_job.feature_selection_percent))
 
         best_params_nb, best_score_nb, time_nb, results_nb = train_nb(list(range(nb_alpha[0], nb_alpha[-1] + 1)),
                                                                       training_df, test_df)
         best_params_svm, best_score_svm, time_svm, results_svm = train_SVM(list(range(c[0], c[-1] + 1)), kernel,
                                                                            list(range(degree[0], degree[-1] + 1)),
                                                                            training_df, test_df)
-        best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter, list(range(max_depth[0], max_depth[-1]+1, 100)), max_features, training_df,
+        best_params_dt, best_score_dt, time_dt, results_dt = train_dt(splitter,
+                                                                      list(range(max_depth[0], max_depth[-1] + 1, 100)),
+                                                                      max_features, training_df,
                                                                       test_df)
         app.run_jobs = app.run_jobs.append(
             {"Time": datetime.now().strftime("%d/%m/%Y %H:%M:%S"), "algorithm": "nb", "config": str(best_params_nb),
@@ -274,15 +283,14 @@ def train_dt(splitter, max_depth, max_features, training_df, test_df):
     insert_jobs_to_db(grid_search, training_df, test_df, predicts, 'DT')
     return grid_search.best_estimator_.get_params(), grid_search.best_score_, grid_search.refit_time_, grid_search.cv_results_
 
-def insert_jobs_to_db(grid_search,training_df, test_df, predicts, alg_type):
+
+def insert_jobs_to_db(grid_search, training_df, test_df, predicts, alg_type):
     print(classification_report(test_df['category'], predicts, target_names=['-1', '0', '1']))
 
     cm = confusion_matrix(test_df['category'], predicts, labels=[-1, 0, 1])
     cm = cm[::-1]
-    insert_dt = """
-                    INSERT INTO history.historical_jobs VALUES
-                    ('%s','%s',  '%s', 'blabla', '%f', '%f', '%s');""" % (
-        app.current_job.id_uuid, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), alg_type,
-        accuracy_score(test_df['category'], predicts), grid_search.refit_time_, cm)
-
-    db.execute_query(db.connection, insert_dt)
+    cursor = app.connection.cursor()
+    cursor.execute("INSERT INTO historical_jobs VALUES (?, ?, ?,'blabla' ,?, ?, ?)", (
+        str(app.current_job.id_uuid), datetime.now().strftime("%Y-%m-%d %H:%M:%S"), alg_type,
+        float(accuracy_score(test_df['category'], predicts)), float(grid_search.refit_time_), str(cm),))
+    app.connection.commit()

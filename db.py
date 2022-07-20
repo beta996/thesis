@@ -1,43 +1,19 @@
 import mysql
 from mysql.connector import Error
+import sqlite3
 
 
-def create_server_connection(host_name, user_name, user_password):
-    connection = None
-    try:
-        connection = mysql.connector.connect(
-            host=host_name,
-            user=user_name,
-            passwd=user_password
-        )
-        print("MySQL Database connection successful")
-    except Error as err:
-        print(f"Error: '{err}'")
+connection = sqlite3.connect("db.name", check_same_thread=False)
+cursor = connection.cursor()
 
-    return connection
-
-
-def execute_query(connection, query):
-    print(query)
-    cursor = connection.cursor()
-    try:
-        cursor.execute(query)
-        connection.commit()
-        print("Query successful")
-        #cursor.close()
-    except Error as err:
-        print(f"Error: '{err}'")
-
-
-def read_query(connection, query):
-    cursor = connection.cursor()
-    result = None
-    try:
-        cursor.execute(query)
-        result = cursor.fetchall()
-        return result
-    except Error as err:
-        print(f"Error: '{err}'")
-
-
-connection = create_server_connection("localhost", "root", "helloworld")
+# cursor.execute(
+#     "CREATE TABLE historical_jobs ( id varchar(100) DEFAULT NULL, execution_time datetime NOT NULL, algorithm "
+#     "varchar(45) DEFAULT NULL, config varchar(45) DEFAULT NULL,best_score float DEFAULT NULL,duration float DEFAULT "
+#     "NULL,confusion_matrix varchar(50) DEFAULT NULL)")
+#
+# cursor.execute(
+#     "CREATE TABLE jobs (  id varchar(45) DEFAULT NULL,  datasets varchar(100) DEFAULT NULL,  preprocessing_steps "
+#     "varchar(200) DEFAULT NULL,  feature_extraction_method varchar(20) DEFAULT NULL,  feature_selection_percent int "
+#     "DEFAULT NULL)")
+#
+# connection.commit()
